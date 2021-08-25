@@ -9,8 +9,12 @@ bert源码阅读
 	中文的词向量和句向量如何获取？
 	
 
-1、直接使用训练好的bert去实现MRPC任务
+### 使用训练好的bert去实现MRPC任务去理解上述的一些问题
+
+1、MRPC任务说明
 MRPC任务，是一个二分类任务，判断两个句子意思是否相同，相同则为1，不同则为0
+
+2、数据格式说明
 	train数据格式如下
 		Quality	#1 ID	#2 ID	#1 String	#2 String
 		1	702876	702977	Amrozi accused his brother , whom he called " the witness " , of deliberately distorting his evidence .	Referring to him as only " the witness " , Amrozi accused his brother of deliberately distorting his evidence .
@@ -20,8 +24,10 @@ MRPC任务，是一个二分类任务，判断两个句子意思是否相同，�
 		0	1089874	1089925	PCCW 's chief operating officer , Mike Butcher , and Alex Arena , the chief financial officer , will report directly to Mr So .	Current Chief Operating Officer Mike Butcher and Group Chief Financial Officer Alex Arena will report to So .
 		1	3019446	3019327	The world 's two largest automakers said their U.S. sales declined more than predicted last month as a late summer sales frenzy caused more of an industry backlash than expected .	Domestic sales at both GM and No. 2 Ford Motor Co. declined more than predicted as a late summer sales frenzy prompted a larger-than-expected industry backlash .
 		2	1945605	1945824	According to the federal Centers for Disease Control and Prevention ( news - web sites ) , there were 19 reported cases of measles in the United States in 2002 .	The Centers for Disease Control and Prevention said there were 19 reported cases of measles in the United States in 2002 .
+
+3、运行代码说明
 数据有了，预训练模型也能下载，bert源码也能下载（其中就包含了有关这个任务的接口），那么怎么去训练和测试这个任务呢？
-（1）首先，要配置环境变量
+（1）首先，要配置环境变量（或者在运行代码的时候直接使用绝对路径）
 	BERT_BASE_DIR和GLUE_DIR/MRPC，前者是下载好了预训练模型的路径，后者是数据集路径
 （2）然后，运行代码
 	python run_classifier.py \
@@ -46,25 +52,27 @@ MRPC任务，是一个二分类任务，判断两个句子意思是否相同，�
 	global_step = 343
 	loss = 0.505248
 
-2、读run_classifier.py
-（1）首先，是各种配置，这些配置都可以在上述的run命令里面去指定，其中有一些是必须指定的，可以看到main入口中规定了：
+4、代码解析
+（1）阅读run_classifier.py
+（1.1）首先，是各种配置，这些配置都可以在上述的run命令里面去指定，其中有一些是必须指定的，可以看到main入口中规定了：
 			flags.mark_flag_as_required("data_dir")
 			flags.mark_flag_as_required("task_name")
 			flags.mark_flag_as_required("vocab_file")
 			flags.mark_flag_as_required("bert_config_file")
 			flags.mark_flag_as_required("output_dir")
-（2）其次，是各种类，主要可以分成两大类
-	（2.1）数据处理类
+（1.2）其次，是各种类，主要可以分成两大类
+	（1.2.1）数据处理类
 			InputExample
-			PaddingInputExample
+			PaddingInputExample 
 			InputFeatures
 			DataProcessor
-	（2.2）下游任务类
+	（1.2.2）下游任务类
 			XnliProcessor
 			MnliProcessor
 			MrpcProcessor
 			ColaProcessor
-（3）最后，是各种方法
+（1.3）最后，是各种方法
+			convert_single_example
 			file_based_convert_examples_to_features
 			file_based_input_fn_builder
 			_truncate_seq_pair
@@ -72,8 +80,51 @@ MRPC任务，是一个二分类任务，判断两个句子意思是否相同，�
 			model_fn_builder
 			input_fn_builder
 			convert_examples_to_features
+			
+（2）阅读tokenization.py
+（2.1）首先，其中具有三个类
+			FullTokenizer
+			BasicTokenizer
+			WordpieceTokenizer
+（2.2）然后，是各种方法
+			validate_case_matches_checkpoint
+			convert_to_unicode
+			printable_text
+			load_vocab
+			convert_by_vocab
+			convert_tokens_to_ids
+			convert_ids_to_tokens
+			whitespace_tokenize
+			_is_whitespace
+			_is_control
+			_is_punctuation
+			
+（3）以MRPC任务为例，趟一遍MRPC任务的执行过程，观察main方法，其主要过程如下：
+构建一个MRPC对象，
+构建一个FullTokenizer对象，
+调用model_fn_builder方法，
+定义训练train的过程，
+定义验证eval的过程，
+定义测试predict的过程，
 
-3、趟一遍MRPC任务的执行过程
+（2.1）首先，观察MRPC类，其中包含两种方法，
+	一是根据当前数据文件(train、test和dev)去构造InputExample，结果对于每个文件可以获得一个InputExample对象列表，而InputExample包含4个属性，第一个属性guid可认为是当前样本的索引id，其它text_a，text_b和label分别对应句子1，句子2和标签。
+	二是获取标签列表方法。
+（2.2）然后，观察FullTokenizer类，
+	(2.2.1)__init__接受词表作为参数，初始化得到4个属性，分别如下：
+		vocab 是一个{word:index, ...} 形式的字典
+		inv_vocab 是对vocab的一个反转，是一个{index:word, ...} 形式的字典
+		basic_tokenizer是一个BasicTokenizer对象，有关BasicTokenizer类，其中最重要的方法是tokenizer，其过程是给定输入text，执行：
+			convert_to_unicode
+			_clean_text
+			_tokenize_chinese_chars
+			whitespace_tokenize
+			_run_strip_accents
+			whitespace_tokenize
+		wordpiece_tokenizer是一个WordpieceTokenizer对象
+		
+
+
 这个过程就写在main方法中，主要有：
 （1）设计日志级别. 控制哪些日志打印到屏幕上。
 	tf.logging.set_verbosity(tf.logging.INFO)
