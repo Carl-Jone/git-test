@@ -128,7 +128,23 @@ MRPC任务，是一个二分类任务，判断两个句子意思是否相同，�
 	tokenizer 对象，是FullTokenizer实例；
 	output_file 是模型输出文件；
 
+	关于该方法，一个基本的过程是，遍历train_examples，对每一个example，也就是每一个InputExample对象去执行convert_single_example方法，获取单个样本的特征，下面重点就在于convert_single_example方法是如何将InputExample转换成InputFeatures对象的：
+	convert_single_example方法参数：ex_index（当前example的索引）, example, label_list, max_seq_length, tokenizer
+	InputFeatures属性：input_ids， input_mask， segment_ids， label_id， is_real_example
+	转换过程：
+		(a) 从example中获取text_a和text_b，首先对text_a和text_b做tokenize获取word列表tokens_a和tokens_b；
+		(b) 当存在tokens_b时，要考察tokens_a + tokens_b的长度是否大于max_seq_length-3，如果不大于则不对tokens_a和tokens_b做改变，如果大于，则通过pop让tokens_a和tokens_b尽可能长度一致，并且总长度为max_seq_length-3；当tokens_b不存在时，仅考虑tokens_a长度和max_seq_length-2做比较，大于则截断，小于则不变；
+		(c) 构造segment_ids：分别去遍历tokens_a和tokens_b，构造出模型的输入tokens = [CLS]tokens_a[SEP]tokens_b[SEP]，并且在这过程中segment_ids会记录tokens_a序列每个token为0，tokens_b序列每个token为1。即0 len(tokens_a)*0 0 len(tokens_b)*1 1
+		(d) 构造input_ids：通过tokenizer.convert_tokens_to_ids将tokens转换成vocab中对应的index；
+		(e) 构造input_mask：[1] * len(input_ids);
+		(f) 以0填充input_ids、input_mask和segment_ids为max_seq_length长度；
+		(g) 构造label_id：直接通过example的label属性获取；
+		(h) 拿到了InputFeatures对象所有的属性，构造出来该对象；
 		
+	之后把获得到的每一个InputFeatures对象写入到output_file中，后续训练模型的时候，这个文件将作为模型的输入参数之一；
+	至此，模型输入从文本 -> InputExample对象 -> InputFeatures对象构建完毕！
+（3.4）模型构建的过程：待续
+
 
 
 
