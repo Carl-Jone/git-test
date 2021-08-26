@@ -114,14 +114,15 @@ MRPC任务，是一个二分类任务，判断两个句子意思是否相同，�
 	(3.2.1)__init__接受词表作为参数，初始化得到4个属性，分别如下：
 		vocab 是一个{word:index, ...} 形式的字典
 		inv_vocab 是对vocab的一个反转，是一个{index:word, ...} 形式的字典
-		basic_tokenizer是一个BasicTokenizer对象，有关BasicTokenizer类，其中最重要的方法是tokenizer，其过程是给定输入text，执行：
+		basic_tokenizer是一个BasicTokenizer对象，有关BasicTokenizer类，其中最重要的方法是tokenize，其过程是给定输入text，大致过程如下：
 			convert_to_unicode 对输入text进行检查，进行py2和py3的兼容性考虑
 			_clean_text 遍历text的每一个字符，过滤掉输入text中的未知字符、不常见的控制字符，再用空格替换掉text中的换行、回车、制表符等空白符
 			_tokenize_chinese_chars 遍历text的每一个字符，当碰到中文字符时，会在前后各加一个空格
 			whitespace_tokenize 按空格切分输入text成为一个word列表，其中英文是word，中文是char
 			_run_strip_accents  在遍历word列表之后，会根据do_lower_case将word转换成小写，然后执行该方法，目的是为了去除某些word头上的音符
-			_run_split_on_punc 
-			whitespace_tokenize
+			_run_split_on_punc 对于输入一个句子来说，该方法会按标点符号切分句子，返回列表；但是在此处传入的是word，没什么特别作用，还是按原样返回
+			whitespace_tokenize 按空格切分输入text成为一个word列表，其中英文是word，中文是char
+		所以，综上basic_tokenizer的tokenize方法的作用是给定输入字符串，在经过去除特殊字符、空白符、中文切字处理、去除音符等操作，返回字符串中的所有word（中文则返回字）组成的列表。
 		wordpiece_tokenizer是一个WordpieceTokenizer对象
 		
 
