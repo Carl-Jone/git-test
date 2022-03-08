@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 444445454545454545454
+
+>>>>>>> refs/remotes/origin/master
 bert源码阅读
 -理清：
 	模型输入
